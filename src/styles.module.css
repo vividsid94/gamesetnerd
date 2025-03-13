@@ -42,10 +42,8 @@
   background-size: 300% 300%;
   animation: gradientBG 10s ease infinite;
   gap: 50px;
-  position: relative;
-  height: 100vh; /* ✅ Exact full-screen height */
-  overflow: hidden; /* ✅ Prevents extra scrolling */
-  margin: 0; /* ✅ Removes any unwanted margins */
+  min-height: 100vh;
+  margin: 0;
 }
 
 /* 🌫️ Soft Glowing Blur Effect */
