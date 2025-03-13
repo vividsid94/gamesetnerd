@@ -19,3 +19,61 @@
 .toggle-group {
   margin-bottom: 20px;
 }
+
+/* 🔥 Fix for Background Gradient Animation */
+@keyframes gradientBG {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* 🔥 Smooth Floating Blur Effect */
+@keyframes floatingBlur {
+  0% { transform: translateY(-20px) scale(1); opacity: 0.8; }
+  50% { transform: translateY(10px) scale(1.05); opacity: 1; }
+  100% { transform: translateY(-20px) scale(1); opacity: 0.8; }
+}
+
+/* 🌟 Main Container with Animated Background */
+.container {
+  padding: 20px;
+  font-family: Arial, sans-serif;
+  background: linear-gradient(45deg, #b3e0ff, #d4eaff, #c1f0c1, #e0e4cc);
+  background-size: 300% 300%;
+  animation: gradientBG 10s ease infinite;
+  gap: 50px;
+  position: relative;
+  height: 100vh; /* ✅ Exact full-screen height */
+  overflow: hidden; /* ✅ Prevents extra scrolling */
+  margin: 0; /* ✅ Removes any unwanted margins */
+}
+
+/* 🌫️ Soft Glowing Blur Effect */
+.container::before,
+.container::after {
+  content: "";
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  background: rgba(255, 255, 255, 0.25);
+  filter: blur(120px);
+  animation: floatingBlur 8s infinite alternate ease-in-out;
+}
+
+.container::before {
+  top: 5%;
+  left: 10%;
+}
+
+.container::after {
+  bottom: 5%;
+  right: 10%;
+}
+
+.cardsWrapper {
+  display: flex;
+  flex-wrap: wrap; /* ✅ Allows multiple rows */
+  justify-content: center; /* ✅ Centers cards */
+  gap: 50px; /* ✅ Adds space between cards */
+  margin-top: 20px;
+}

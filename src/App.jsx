@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { styled } from "@mui/styles";
+import { Box, keyframes } from "@mui/system";
 import { ToggleButton, ToggleButtonGroup } from "@mui/material";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
@@ -46,32 +47,33 @@ const convertDecimalToAmerican = (decimalOdd) => {
   return odd >= 2.0 ? `+${Math.round((odd - 1) * 100)}` : `${Math.round(-100 / (odd - 1))}`;
 };
 
-// Styled Components
+const gradientAnimation = keyframes`
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+`;
+
 const Container = styled("div")({
   padding: "20px",
   fontFamily: "Arial, sans-serif",
-  backgroundColor: "#f4f4f9",
+  background: "linear-gradient(-45deg, #f4f4f9, #dfe7fd, #c1d3fe, #f4f4f9)",
+  backgroundSize: "400% 400%",
+  animation: `${gradientAnimation} 10s ease infinite`, // ✅ Apply keyframes here
   display: "flex",
-  flexWrap: "wrap", // ✅ Wraps cards into multiple rows
+  flexWrap: "wrap",
   justifyContent: "center",
-  gap: "50px", // ✅ Adds space between cards
-});
-
-const Title = styled("h1")({
-  color: "#2c3e50",
-  fontSize: "2.5rem",
-  width: "100%",
-  textAlign: "center",
-  marginBottom: "20px",
+  gap: "50px",
+  position: "relative",
+  overflow: "hidden",
 });
 
 const MatchCard = styled("div")(({ isDragging }) => ({
   backgroundColor: "white",
   borderRadius: "10px",
   boxShadow: isDragging ? "0px 4px 15px rgba(0,0,0,0.2)" : "0px 4px 10px rgba(0,0,0,0.1)",
-  padding: "20px",
+  padding: "10px 20px 20px",
   width: "100%",
-  maxWidth: "300px", // ✅ Makes cards fit in rows dynamically
+  maxWidth: "300px",
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
@@ -140,7 +142,7 @@ const DraggableMatch = ({ match, index, moveCard, flashingCells }) => {
 
   return (
     <MatchCard ref={(node) => drag(drop(node))} >
-      <h2>{match.round}</h2>
+      <h3>{match.round}</h3>
       <PlayersContainer>
         <Player>
           <PlayerImage src={match.homeLogo || defaultSilhouette} alt="Home Player" />
@@ -243,6 +245,7 @@ function App() {
   });  
   return (
     <DndProvider backend={HTML5Backend}>
+      <Box className={styles.container}>
       <div className={styles.center}>
         <h2 className={styles.title}>Game, Set, Nerd! 🎾</h2>
         <ToggleButtonGroup
@@ -258,17 +261,19 @@ function App() {
           <ToggleButton value="atp-wta">ATP/WTA</ToggleButton>
         </ToggleButtonGroup>
       </div>
-  
-      <Container>
       {loading ? (
         <Modal>
           <CircularProgress size={30} thickness={4} color="primary" />
           <h3 className={styles.title}>Initializing API...</h3>
         </Modal>
-      ) : filteredMatches.map((match, index) => (
-        <DraggableMatch key={match.event_key} match={match} index={index} moveCard={moveCard} flashingCells={flashingCells} />
-      ))}
-     </Container>
+      ) : (
+        <div className={styles.cardsWrapper}>
+          {filteredMatches.map((match, index) => (
+            <DraggableMatch key={match.event_key} match={match} index={index} moveCard={moveCard} flashingCells={flashingCells} />
+          ))}
+        </div>
+      )}
+     </Box>
     </DndProvider>
   );  
 }
