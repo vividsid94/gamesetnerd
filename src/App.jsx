@@ -6,6 +6,7 @@ import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import CircularProgress from "@mui/material/CircularProgress";
 import styles from "./styles.module.css";
+import { initializeWebSocket } from "./webSocketService";
 
 const Modal = ({ children }) => (
   <div
@@ -138,7 +139,7 @@ const DraggableMatch = ({ match, index, moveCard, flashingCells }) => {
   });
 
   return (
-    <MatchCard ref={(node) => drag(drop(node))} isDragging={isDragging}>
+    <MatchCard ref={(node) => drag(drop(node))} >
       <h2>{match.round}</h2>
       <PlayersContainer>
         <Player>
@@ -173,7 +174,7 @@ function App() {
 
   const fetchOdds = async () => {
     try {
-      const response = await axios.get(apiUrl);
+      const response = await axios.get("/.netlify/functions/getOdds"); // Call Netlify function
       const events = Object.values(response.data.result || {});
       console.log("Live Odds API:", events);
   
@@ -196,57 +197,18 @@ function App() {
     } catch (error) {
       console.error("Error fetching odds:", error);
     }
-  };
-  
+  };  
   
   useEffect(() => {
-    const socket = new WebSocket(`wss://wss.api-tennis.com/live?APIkey=${apiKey}&timezone=+03:00`);
-  
-    socket.onopen = () => {
-      console.log("WebSocket connection established");
-    };
-  
-    socket.onmessage = (e) => {
-      if (e.data) {
-        try {
-          const matchesData = JSON.parse(e.data);
-          if (!matchesData || Object.keys(matchesData).length === 0) return;
-          console.log("Web Socket API:", matchesData);
-          const formattedMatches = Object.values(matchesData).map(event => ({
-            event_key: event.event_key,
-            round: event.tournament_name,
-            homePlayer: event.event_first_player,
-            awayPlayer: event.event_second_player,
-            homeLogo: event.event_first_player_logo,
-            awayLogo: event.event_second_player_logo,
-            homeOdd: "N/A",
-            awayOdd: "N/A",
-          }));
-  
-          setMatches(formattedMatches);
-          setLoading(false);
-          fetchOdds();
-        } catch (err) {
-          console.error("Error parsing WebSocket message:", err);
-        }
-      }
-    };
-  
-    socket.onerror = (error) => {
-      console.error("WebSocket error:", error);
-    };
-  
-    socket.onclose = (event) => {
-      console.warn("WebSocket closed:", event);
-    };
-  
+    const socket = initializeWebSocket(apiKey, setMatches, fetchOdds, setLoading);
+
     return () => {
       if (socket.readyState === WebSocket.OPEN) {
         socket.close();
-        console.log("WebSocket connection closed cleanly");
+        console.log("WebSocket connection closed");
       }
     };
-  }, [odds]);  
+  }, []);
 
   useEffect(() => {
     fetchOdds();
