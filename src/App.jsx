@@ -171,34 +171,42 @@ function App() {
   const apiKey = import.meta.env.VITE_API_KEY;
   const apiUrl = `https://api.api-tennis.com/tennis/?method=get_live_odds&APIkey=${apiKey}`;
 
-  // Fetch live odds
-  const fetchOdds = () => {
-    axios.get(apiUrl)
-      .then(response => {
-        const events = Object.values(response.data.result || {});
-        const newOdds = {};
-        events.forEach(event => {
-          newOdds[event.event_key] = {
-            homeOdd: convertDecimalToAmerican(event.live_odds?.find(o => o.type === "Home")?.value || "N/A"),
-            awayOdd: convertDecimalToAmerican(event.live_odds?.find(o => o.type === "Away")?.value || "N/A"),
-          };
-        });
-
-        setOdds(newOdds);
-      })
-      .catch(error => console.error("Error fetching odds:", error));
+  const fetchOdds = async () => {
+    try {
+      const response = await axios.get(apiUrl);
+      const events = Object.values(response.data.result || {});
+      console.log(events)
+      setMatches((prevMatches) =>
+        prevMatches.map((match) => {
+          const event = events.find((e) => e.event_key === match.event_key);
+          if (event) {
+            return {
+              ...match,
+              homeOdd: convertDecimalToAmerican(event.live_odds?.find(o => o.type === "Home")?.value || "N/A"),
+              awayOdd: convertDecimalToAmerican(event.live_odds?.find(o => o.type === "Away")?.value || "N/A"),
+            };
+          }
+          return match; 
+        })
+      );
+    } catch (error) {
+      console.error("Error fetching odds:", error);
+    }
   };
-
-  // WebSocket to get match data
+  
   useEffect(() => {
     const socket = new WebSocket(`wss://wss.api-tennis.com/live?APIkey=${apiKey}&timezone=+03:00`);
-
+  
+    socket.onopen = () => {
+      console.log("WebSocket connection established");
+    };
+  
     socket.onmessage = (e) => {
       if (e.data) {
         try {
           const matchesData = JSON.parse(e.data);
           if (!matchesData || Object.keys(matchesData).length === 0) return;
-
+          console.log(matchesData);
           const formattedMatches = Object.values(matchesData).map(event => ({
             event_key: event.event_key,
             round: event.tournament_name,
@@ -206,10 +214,10 @@ function App() {
             awayPlayer: event.event_second_player,
             homeLogo: event.event_first_player_logo,
             awayLogo: event.event_second_player_logo,
-            homeOdd: odds[event.event_key]?.homeOdd || "N/A",
-            awayOdd: odds[event.event_key]?.awayOdd || "N/A",
+            homeOdd: "N/A",
+            awayOdd: "N/A",
           }));
-
+  
           setMatches(formattedMatches);
           setLoading(false);
           fetchOdds();
@@ -218,14 +226,29 @@ function App() {
         }
       }
     };
-
-    return () => socket.close();
-  }, [odds]);
+  
+    socket.onerror = (error) => {
+      console.error("WebSocket error:", error);
+    };
+  
+    socket.onclose = (event) => {
+      console.warn("WebSocket closed:", event);
+    };
+  
+    return () => {
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.close();
+        console.log("WebSocket connection closed cleanly");
+      }
+    };
+  }, [odds]);  
 
   useEffect(() => {
+    fetchOdds();
     const interval = setInterval(fetchOdds, 10000);
     return () => clearInterval(interval);
   }, []);
+  
 
   const [tournamentType, setTournamentType] = useState("all");
 
