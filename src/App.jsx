@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { styled } from "@mui/styles";
 import { ToggleButton, ToggleButtonGroup } from "@mui/material";
-
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
+import CircularProgress from "@mui/material/CircularProgress";
 import styles from "./styles.module.css";
 
 const Modal = ({ children }) => (
@@ -270,14 +270,15 @@ function App() {
       </div>
   
       <Container>
-        {loading ? (
-          <Modal>
-            <h3 className={styles.title}>Initializing API...</h3>
-          </Modal>
-        ) : filteredMatches.map((match, index) => (
-          <DraggableMatch key={match.event_key} match={match} index={index} moveCard={moveCard} flashingCells={flashingCells} />
-        ))}
-      </Container>
+      {loading ? (
+        <Modal>
+          <CircularProgress size={30} thickness={4} color="primary" />
+          <h3 className={styles.title}>Initializing API...</h3>
+        </Modal>
+      ) : filteredMatches.map((match, index) => (
+        <DraggableMatch key={match.event_key} match={match} index={index} moveCard={moveCard} flashingCells={flashingCells} />
+      ))}
+     </Container>
     </DndProvider>
   );  
 }
