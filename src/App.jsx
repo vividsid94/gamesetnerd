@@ -47,12 +47,6 @@ const convertDecimalToAmerican = (decimalOdd) => {
   return odd >= 2.0 ? `+${Math.round((odd - 1) * 100)}` : `${Math.round(-100 / (odd - 1))}`;
 };
 
-const gradientAnimation = keyframes`
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-`;
-
 const MatchCard = styled("div")(({ isDragging }) => ({
   backgroundColor: "white",
   borderRadius: "10px",
@@ -108,7 +102,7 @@ const defaultSilhouette = "https://upload.wikimedia.org/wikipedia/commons/7/7c/P
 
 // Draggable Card Component
 const DraggableMatch = ({ match, index, moveCard, flashingCells }) => {
-  const [{ isDragging }, drag] = useDrag({
+  const [{}, drag] = useDrag({
     type: "MATCH",
     item: { index },
     collect: (monitor) => ({
@@ -140,10 +134,10 @@ const DraggableMatch = ({ match, index, moveCard, flashingCells }) => {
         </Player>
       </PlayersContainer>
       <OddsContainer>
-        <FlashingOdds flashing={flashingCells[`${index}-home`]}>
+        <FlashingOdds>
           {match.homeOdd}
         </FlashingOdds>
-        <FlashingOdds flashing={flashingCells[`${index}-away`]}>
+        <FlashingOdds>
           {match.awayOdd}
         </FlashingOdds>
       </OddsContainer>
@@ -153,9 +147,7 @@ const DraggableMatch = ({ match, index, moveCard, flashingCells }) => {
 
 function App() {
   const [matches, setMatches] = useState([]);
-  const [flashingCells, setFlashingCells] = useState({});
   const [loading, setLoading] = useState(true);
-  const [playerNames, setPlayerNames] = useState({});
 
   const apiKey = import.meta.env.VITE_API_KEY;
 
@@ -170,7 +162,7 @@ function App() {
   
           const homeWinOdd = event.live_odds?.find(o => o.odd_name === "To Win" && o.type === "Home")?.value || "N/A";
           const awayWinOdd = event.live_odds?.find(o => o.odd_name === "To Win" && o.type === "Away")?.value || "N/A";
-  
+          console.log(existingMatch)
           const homePlayer = existingMatch?.homePlayer || 
             (await axios.get(`/.netlify/functions/getPlayer?player_key=${event.first_player_key}`)).data.player_name;
   
@@ -264,7 +256,7 @@ function App() {
       ) : (
         <div className={styles.cardsWrapper}>
           {filteredMatches.map((match, index) => (
-            <DraggableMatch key={match.event_key} match={match} index={index} moveCard={moveCard} flashingCells={flashingCells} />
+            <DraggableMatch key={match.event_key} match={match} index={index} moveCard={moveCard}/>
           ))}
         </div>
       )}
