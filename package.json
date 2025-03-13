@@ -16,6 +16,7 @@
     "@mui/material": "^6.4.7",
     "@mui/styles": "^6.4.7",
     "axios": "^1.8.3",
+    "dotenv": "^16.4.7",
     "react": "^19.0.0",
     "react-dnd": "^16.0.1",
     "react-dnd-html5-backend": "^16.0.1",

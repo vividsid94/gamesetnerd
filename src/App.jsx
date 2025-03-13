@@ -53,20 +53,6 @@ const gradientAnimation = keyframes`
   100% { background-position: 0% 50%; }
 `;
 
-const Container = styled("div")({
-  padding: "20px",
-  fontFamily: "Arial, sans-serif",
-  background: "linear-gradient(-45deg, #f4f4f9, #dfe7fd, #c1d3fe, #f4f4f9)",
-  backgroundSize: "400% 400%",
-  animation: `${gradientAnimation} 10s ease infinite`, // ✅ Apply keyframes here
-  display: "flex",
-  flexWrap: "wrap",
-  justifyContent: "center",
-  gap: "50px",
-  position: "relative",
-  overflow: "hidden",
-});
-
 const MatchCard = styled("div")(({ isDragging }) => ({
   backgroundColor: "white",
   borderRadius: "10px",
@@ -167,39 +153,55 @@ const DraggableMatch = ({ match, index, moveCard, flashingCells }) => {
 
 function App() {
   const [matches, setMatches] = useState([]);
-  const [odds, setOdds] = useState({});
   const [flashingCells, setFlashingCells] = useState({});
   const [loading, setLoading] = useState(true);
+  const [playerNames, setPlayerNames] = useState({});
 
   const apiKey = import.meta.env.VITE_API_KEY;
-  const apiUrl = `https://api.api-tennis.com/tennis/?method=get_live_odds&APIkey=${apiKey}`;
 
   const fetchOdds = async () => {
     try {
-      const response = await axios.get("/.netlify/functions/getOdds"); // Call Netlify function
+      const response = await axios.get("/.netlify/functions/getOdds");
       const events = Object.values(response.data.result || {});
       console.log("Live Odds API:", events);
+      const formattedMatches = await Promise.all(
+        events.map(async (event) => {
+          const existingMatch = matches.find(m => m.event_key === event.event_key);
   
-      setMatches((prevMatches) =>
-        prevMatches.map((match) => {
-          const event = events.find((e) => e.event_key === match.event_key);
-          if (event) {
-            const homeWinOdd = event.live_odds?.find(o => o.odd_name === "To Win" && o.type === "Home")?.value || "N/A";
-            const awayWinOdd = event.live_odds?.find(o => o.odd_name === "To Win" && o.type === "Away")?.value || "N/A";
+          const homeWinOdd = event.live_odds?.find(o => o.odd_name === "To Win" && o.type === "Home")?.value || "N/A";
+          const awayWinOdd = event.live_odds?.find(o => o.odd_name === "To Win" && o.type === "Away")?.value || "N/A";
   
-            return {
-              ...match,
-              homeOdd: convertDecimalToAmerican(homeWinOdd),
-              awayOdd: convertDecimalToAmerican(awayWinOdd),
-            };
-          }
-          return match; 
+          const homePlayer = existingMatch?.homePlayer || 
+            (await axios.get(`/.netlify/functions/getPlayer?player_key=${event.first_player_key}`)).data.player_name;
+  
+          const awayPlayer = existingMatch ? existingMatch.awayPlayer :
+            (await axios.get(`/.netlify/functions/getPlayer?player_key=${event.second_player_key}`)).data.player_name;
+  
+          return {
+            event_key: event.event_key,
+            round: event.tournament_name,
+            homePlayer,
+            awayPlayer,
+            homeLogo: event.event_first_player_logo,
+            awayLogo: event.event_second_player_logo,
+            homeOdd: convertDecimalToAmerican(homeWinOdd),
+            awayOdd: convertDecimalToAmerican(awayWinOdd),
+          };
         })
       );
+  
+      setMatches(formattedMatches);
+      setLoading(false);
     } catch (error) {
       console.error("Error fetching odds:", error);
     }
-  };  
+  };
+  
+  useEffect(() => {
+    fetchOdds();
+    const interval = setInterval(fetchOdds, 10000);
+    return () => clearInterval(interval);
+  }, []);
   
   useEffect(() => {
     const socket = initializeWebSocket(apiKey, setMatches, fetchOdds, setLoading);
@@ -211,13 +213,6 @@ function App() {
       }
     };
   }, []);
-
-  useEffect(() => {
-    fetchOdds();
-    const interval = setInterval(fetchOdds, 10000);
-    return () => clearInterval(interval);
-  }, []);
-  
 
   const [tournamentType, setTournamentType] = useState("all");
 

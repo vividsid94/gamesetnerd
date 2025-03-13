@@ -19,15 +19,14 @@ export const initializeWebSocket = (apiKey, setMatches, fetchOdds, setLoading) =
             awayPlayer: event.event_second_player,
             homeLogo: event.event_first_player_logo,
             awayLogo: event.event_second_player_logo,
-            homeOdd: "N/A", // Placeholder, will be updated by fetchOdds()
+            homeOdd: "N/A",
             awayOdd: "N/A",
           }));
   
-          setMatches(formattedMatches);
-          setLoading(false);
+          //setMatches(formattedMatches);
+          //setLoading(false);
   
-          // Fetch odds after setting match data
-          fetchOdds();
+          //fetchOdds();
         } catch (err) {
           console.error("Error parsing WebSocket message:", err);
         }
