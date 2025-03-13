@@ -2,16 +2,14 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { styled } from "@mui/styles";
 
+// Convert Decimal Odds to American Odds
 const convertDecimalToAmerican = (decimalOdd) => {
   if (decimalOdd === "N/A" || isNaN(decimalOdd)) return "N/A";
   const odd = parseFloat(decimalOdd);
-  if (odd >= 2.0) {
-    return `+${Math.round((odd - 1) * 100)}`;
-  } else {
-    return `${Math.round(-100 / (odd - 1))}`;
-  }
+  return odd >= 2.0 ? `+${Math.round((odd - 1) * 100)}` : `${Math.round(-100 / (odd - 1))}`;
 };
 
+// Styled Components
 const Container = styled("div")({
   padding: "20px",
   fontFamily: "Arial, sans-serif",
@@ -39,60 +37,123 @@ const PlayerImage = styled("img")({
 });
 
 function App() {
-  const [matches, setMatches] = useState([]);
-  const [previousMatches, setPreviousMatches] = useState([]);
-  const [flashingCells, setFlashingCells] = useState({});
+  const [matches, setMatches] = useState([]); // Stores match data (from WebSocket)
+  const [previousOdds, setPreviousOdds] = useState({}); // Stores old odds for comparison
+  const [flashingCells, setFlashingCells] = useState({}); // Manages flashing animation
   const [loading, setLoading] = useState(true);
+
   const apiKey = import.meta.env.VITE_API_KEY;
   const apiUrl = `https://api.api-tennis.com/tennis/?method=get_live_odds&APIkey=${apiKey}`;
 
+  // Fetch odds from API (Only updates odds, not match details)
+  const fetchOdds = () => {
+    axios.get(apiUrl)
+      .then(response => {
+        console.log("API Odds Response:", response.data);
+        const eventsObject = response.data.result || {};
+        const events = Object.values(eventsObject); // Convert object to array
+
+        // Create a mapping of odds based on event_key
+        const newOdds = {};
+        events.forEach(event => {
+          newOdds[event.event_key] = {
+            homeOdd: convertDecimalToAmerican(event.live_odds?.find(o => o.type === "Home")?.value || "N/A"),
+            awayOdd: convertDecimalToAmerican(event.live_odds?.find(o => o.type === "Away")?.value || "N/A"),
+          };
+        });
+
+        // Compare new odds with previous odds to detect changes
+        const newFlashingCells = {};
+        matches.forEach((match, index) => {
+          if (previousOdds[match.event_key]) {
+            if (previousOdds[match.event_key].homeOdd !== newOdds[match.event_key]?.homeOdd) {
+              newFlashingCells[`${index}-home`] = true;
+            }
+            if (previousOdds[match.event_key].awayOdd !== newOdds[match.event_key]?.awayOdd) {
+              newFlashingCells[`${index}-away`] = true;
+            }
+          }
+        });
+
+        setFlashingCells(newFlashingCells);
+        setTimeout(() => setFlashingCells({}), 3000); // Remove flashing effect after 3s
+
+        // Update matches by merging new odds
+        setMatches(prevMatches => prevMatches.map(match => ({
+          ...match,
+          homeOdd: newOdds[match.event_key]?.homeOdd || "N/A",
+          awayOdd: newOdds[match.event_key]?.awayOdd || "N/A",
+        })));
+
+        setPreviousOdds(newOdds);
+      })
+      .catch(error => {
+        console.error("Error fetching odds:", error);
+      });
+  };
+
+  // WebSocket Connection for match data
   useEffect(() => {
-    const fetchOdds = () => {
-      axios.get(apiUrl)
-        .then(response => {
-          console.log("API Response:", response.data);
-          const events = response.data.result || {};
-          const formattedMatches = Object.values(events).map(event => {
-            const odds = event.live_odds.filter(odd => odd.odd_name === "To Win");
-            return {
-              round: event.event_type_type,
-              homePlayer: event.first_player_key,
-              awayPlayer: event.second_player_key,
-              homeLogo: event.event_first_player_logo,
-              awayLogo: event.event_second_player_logo,
-              homeOdd: convertDecimalToAmerican(odds.find(o => o.type === "Home")?.value || "N/A"),
-              awayOdd: convertDecimalToAmerican(odds.find(o => o.type === "Away")?.value || "N/A"),
-            };
-          });
+    console.log("Initializing WebSocket...");
 
-          setPreviousMatches(prevMatches => {
-            const newFlashingCells = {};
-            formattedMatches.forEach((match, index) => {
-              const prevMatch = prevMatches[index];
-              if (prevMatch) {
-                if (prevMatch.homeOdd !== match.homeOdd) newFlashingCells[`${index}-home`] = true;
-                if (prevMatch.awayOdd !== match.awayOdd) newFlashingCells[`${index}-away`] = true;
-              }
-            });
+    const socket = new WebSocket(`wss://wss.api-tennis.com/live?APIkey=${apiKey}&timezone=+03:00`);
 
-            setFlashingCells(newFlashingCells);
-            setTimeout(() => setFlashingCells({}), 3000);
-            return formattedMatches;
-          });
+    socket.onopen = () => {
+      console.log("WebSocket Connection Opened!");
+    };
+
+    socket.onmessage = (e) => {
+      console.log("Received WebSocket Message:");
+
+      if (e.data) {
+        try {
+          const matchesData = JSON.parse(e.data);
+
+          if (!matchesData || Object.keys(matchesData).length === 0) {
+            console.log("WebSocket Data Empty");
+            return;
+          }
+
+          console.log(matchesData);
+
+          const formattedMatches = Object.values(matchesData).map(event => ({
+            event_key: event.event_key, // Unique identifier for each match
+            round: event.tournament_name,
+            homePlayer: event.event_first_player,
+            awayPlayer: event.event_second_player,
+            homeLogo: event.event_first_player_logo,
+            awayLogo: event.event_second_player_logo,
+          }));
 
           setMatches(formattedMatches);
           setLoading(false);
-        })
-        .catch(error => {
-          console.error("Error fetching odds:", error);
-          setLoading(false);
-        });
+          fetchOdds(); // Fetch odds immediately after getting match data
+
+        } catch (err) {
+          console.error("Error parsing WebSocket message:", err);
+        }
+      }
     };
 
-    fetchOdds();
+    socket.onerror = (error) => {
+      console.error("WebSocket Error:", error);
+    };
+
+    socket.onclose = (event) => {
+      console.warn("WebSocket Closed:", event);
+    };
+
+    return () => {
+      console.log("Closing WebSocket...");
+      socket.close();
+    };
+  }, []);
+
+  // Poll API every 10s to keep odds updated
+  useEffect(() => {
     const interval = setInterval(fetchOdds, 10000);
     return () => clearInterval(interval);
-  }, [apiUrl]);
+  }, []);
 
   return (
     <Container>
@@ -102,51 +163,30 @@ function App() {
       ) : matches.length === 0 ? (
         <p>No live odds available.</p>
       ) : (
-        <table style={{ width: "90%", borderCollapse: "collapse", backgroundColor: "white", borderRadius: "10px", overflow: "hidden", boxShadow: "0px 4px 15px rgba(0,0,0,0.15)" }}>
-          <thead>
-            <tr style={{ backgroundColor: "#2c3e50", color: "white", fontSize: "1.3rem" }}>
-              <th>Match</th>
-              <th>Player 1</th>
-              <th>Player 2</th>
-              <th>Live Odds (Player 1)</th>
-              <th>Live Odds (Player 2)</th>
-            </tr>
-          </thead>
+        <table style={{borderCollapse: "collapse", backgroundColor: "white", borderRadius: "10px", overflow: "hidden", boxShadow: "0px 4px 15px rgba(0,0,0,0.15)" }}>
           <tbody>
             {matches.map((match, index) => (
-              <tr key={index} style={{ backgroundColor: index % 2 === 0 ? "#ecf0f1" : "white" }}>
-                <td style={{ padding: "20px", fontWeight: "bold" }}>{match.round}</td>
+              <tr key={match.event_key} style={{ backgroundColor: index % 2 === 0 ? "#ecf0f1" : "white" }}>
                 <td>
+                  <PlayerCell>
+                    {match.round}
+                  </PlayerCell>
                   <PlayerCell>
                     {match.homeLogo && <PlayerImage src={match.homeLogo} alt="Player 1 Logo" />} 
                     {match.homePlayer}
                   </PlayerCell>
-                </td>
-                <td>
                   <PlayerCell>
                     {match.awayLogo && <PlayerImage src={match.awayLogo} alt="Player 2 Logo" />} 
                     {match.awayPlayer}
                   </PlayerCell>
                 </td>
-                <td
-                  style={{
-                    padding: "20px",
-                    fontWeight: "bold",
-                    border: flashingCells[`${index}-home`] ? "3px solid yellow" : "none",
-                    transition: "border 0.3s ease-in-out",
-                  }}
-                >
-                  {match.homeOdd}
-                </td>
-                <td
-                  style={{
-                    padding: "20px",
-                    fontWeight: "bold",
-                    border: flashingCells[`${index}-away`] ? "3px solid yellow" : "none",
-                    transition: "border 0.3s ease-in-out",
-                  }}
-                >
-                  {match.awayOdd}
+                <td style={{ border: flashingCells[`${index}-home`] ? "3px solid yellow" : "none", transition: "border 0.3s ease-in-out" }}>
+                  <PlayerCell>
+                    {match.homeOdd}
+                  </PlayerCell>
+                  <PlayerCell>
+                    {match.awayOdd}
+                  </PlayerCell>
                 </td>
               </tr>
             ))}

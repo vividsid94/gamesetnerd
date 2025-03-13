@@ -1,3 +1,8 @@
+@import url('https://fonts.googleapis.com/css?family=Raleway');
+*{
+	font-family: 'Raleway' !important;
+}
+
 #root {
   max-width: 1280px;
   margin: 0 auto;
