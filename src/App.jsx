@@ -176,14 +176,18 @@ function App() {
       const response = await axios.get(apiUrl);
       const events = Object.values(response.data.result || {});
       console.log("Live Odds API:", events);
+  
       setMatches((prevMatches) =>
         prevMatches.map((match) => {
           const event = events.find((e) => e.event_key === match.event_key);
           if (event) {
+            const homeWinOdd = event.live_odds?.find(o => o.odd_name === "To Win" && o.type === "Home")?.value || "N/A";
+            const awayWinOdd = event.live_odds?.find(o => o.odd_name === "To Win" && o.type === "Away")?.value || "N/A";
+  
             return {
               ...match,
-              homeOdd: convertDecimalToAmerican(event.live_odds?.find(o => o.type === "Home")?.value || "N/A"),
-              awayOdd: convertDecimalToAmerican(event.live_odds?.find(o => o.type === "Away")?.value || "N/A"),
+              homeOdd: convertDecimalToAmerican(homeWinOdd),
+              awayOdd: convertDecimalToAmerican(awayWinOdd),
             };
           }
           return match; 
@@ -193,6 +197,7 @@ function App() {
       console.error("Error fetching odds:", error);
     }
   };
+  
   
   useEffect(() => {
     const socket = new WebSocket(`wss://wss.api-tennis.com/live?APIkey=${apiKey}&timezone=+03:00`);
