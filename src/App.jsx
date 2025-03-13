@@ -175,7 +175,7 @@ function App() {
     try {
       const response = await axios.get(apiUrl);
       const events = Object.values(response.data.result || {});
-      console.log(events)
+      console.log("Live Odds API:", events);
       setMatches((prevMatches) =>
         prevMatches.map((match) => {
           const event = events.find((e) => e.event_key === match.event_key);
@@ -206,7 +206,7 @@ function App() {
         try {
           const matchesData = JSON.parse(e.data);
           if (!matchesData || Object.keys(matchesData).length === 0) return;
-          console.log(matchesData);
+          console.log("Web Socket API:", matchesData);
           const formattedMatches = Object.values(matchesData).map(event => ({
             event_key: event.event_key,
             round: event.tournament_name,
