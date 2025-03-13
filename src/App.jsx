@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { styled } from "@mui/styles";
+import { ToggleButton, ToggleButtonGroup } from "@mui/material";
+
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import styles from "./styles.module.css";
@@ -225,6 +227,14 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
+  const [tournamentType, setTournamentType] = useState("all");
+
+  const handleTournamentChange = (event, newType) => {
+    if (newType !== null) {
+      setTournamentType(newType);
+    }
+  }
+
   const moveCard = (fromIndex, toIndex) => {
     setMatches((prevMatches) => {
       const updatedMatches = [...prevMatches];
@@ -233,21 +243,43 @@ function App() {
       return updatedMatches;
     });
   };
-
+  
+  const filteredMatches = matches.filter((match) => {
+    if (tournamentType === "all") return true;
+    if (tournamentType === "challenger") return match.round.includes("Challenger");
+    if (tournamentType === "itf") return match.round.includes("ITF");
+    if (tournamentType === "atp-wta") return !match.round.includes("Challenger") && !match.round.includes("ITF");
+    return false;
+  });  
   return (
     <DndProvider backend={HTML5Backend}>
-      <h2 className={styles.title}>Game, Set, Nerd! 🎾</h2>
+      <div className={styles.center}>
+        <h2 className={styles.title}>Game, Set, Nerd! 🎾</h2>
+        <ToggleButtonGroup
+          value={tournamentType}
+          exclusive
+          onChange={handleTournamentChange}
+          aria-label="Tournament Filter"
+          sx={{ marginBottom: "20px" }}
+        >
+          <ToggleButton value="all">All</ToggleButton>
+          <ToggleButton value="challenger">Challenger</ToggleButton>
+          <ToggleButton value="itf">ITF</ToggleButton>
+          <ToggleButton value="atp-wta">ATP/WTA</ToggleButton>
+        </ToggleButtonGroup>
+      </div>
+  
       <Container>
         {loading ? (
           <Modal>
             <h3 className={styles.title}>Initializing API...</h3>
           </Modal>
-        ) : matches.map((match, index) => (
+        ) : filteredMatches.map((match, index) => (
           <DraggableMatch key={match.event_key} match={match} index={index} moveCard={moveCard} flashingCells={flashingCells} />
         ))}
       </Container>
     </DndProvider>
-  );
+  );  
 }
 
 export default App;
