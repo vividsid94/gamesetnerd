@@ -3,6 +3,7 @@ import axios from "axios";
 import { styled } from "@mui/styles";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
+import styles from "./styles.module.css";
 
 const Modal = ({ children }) => (
   <div
@@ -235,11 +236,11 @@ function App() {
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <Title>Live Tennis Odds 🎾 (Drag to Reorder)</Title>
+      <h2 className={styles.title}>Game, Set, Nerd! 🎾</h2>
       <Container>
         {loading ? (
           <Modal>
-            <h2>Initializing API...</h2>
+            <h3 className={styles.title}>Initializing API...</h3>
           </Modal>
         ) : matches.map((match, index) => (
           <DraggableMatch key={match.event_key} match={match} index={index} moveCard={moveCard} flashingCells={flashingCells} />
