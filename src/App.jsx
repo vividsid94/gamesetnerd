@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { styled } from "@mui/styles";
-import { Box, keyframes } from "@mui/system";
+import { Box, display, flexbox, keyframes, width } from "@mui/system";
 import { ToggleButton, ToggleButtonGroup } from "@mui/material";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
@@ -39,57 +39,25 @@ const Modal = ({ children }) => (
   </div>
 );
 
-
-// Convert Decimal Odds to American Odds
 const convertDecimalToAmerican = (decimalOdd) => {
   if (decimalOdd === "N/A" || isNaN(decimalOdd)) return "N/A";
+
   const odd = parseFloat(decimalOdd);
-  return odd >= 2.0 ? `+${Math.round((odd - 1) * 100)}` : `${Math.round(-100 / (odd - 1))}`;
+
+  if (odd <= 1 || !isFinite(odd)) return ""; // Prevents -Infinity and invalid values
+
+  const americanOdd = odd >= 2.0 
+    ? `+${Math.round((odd - 1) * 100)}`
+    : `${Math.round(-100 / (odd - 1))}`;
+
+  return Math.abs(americanOdd) > 100000 ? "" : americanOdd; // Remove extreme negative odds
 };
 
+
 const MatchCard = styled("div")(({ isDragging }) => ({
-  backgroundColor: "white",
-  borderRadius: "10px",
-  boxShadow: isDragging ? "0px 4px 15px rgba(0,0,0,0.2)" : "0px 4px 10px rgba(0,0,0,0.1)",
-  padding: "10px 20px 20px",
-  width: "100%",
-  maxWidth: "300px",
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
-  textAlign: "center",
   opacity: isDragging ? 0.5 : 1,
   cursor: "grab",
 }));
-
-const PlayersContainer = styled("div")({
-  display: "flex",
-  justifyContent: "space-between",
-  width: "100%",
-  alignItems: "center",
-});
-
-const Player = styled("div")({
-  display: "flex",
-  alignItems: "center",
-  gap: "10px",
-});
-
-const PlayerImage = styled("img")({
-  width: "40px",
-  height: "40px",
-  borderRadius: "50%",
-  objectFit: "cover",
-});
-
-const OddsContainer = styled("div")({
-  display: "flex",
-  justifyContent: "space-between",
-  width: "100%",
-  marginTop: "10px",
-  fontSize: "1.2rem",
-  fontWeight: "bold",
-});
 
 const FlashingOdds = styled("div")(({ flashing }) => ({
   padding: "5px 15px",
@@ -100,18 +68,16 @@ const FlashingOdds = styled("div")(({ flashing }) => ({
 
 const defaultSilhouette = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png";
 
-// Draggable Card Component
-const DraggableMatch = ({ match, index, moveCard, flashingCells }) => {
-  
+const DraggableMatch = ({ match, index, moveCard }) => {
   const [darkMode, setDarkMode] = useState(window.matchMedia("(prefers-color-scheme: dark)").matches);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
     const handleChange = () => setDarkMode(mediaQuery.matches);
-
     mediaQuery.addEventListener("change", handleChange);
     return () => mediaQuery.removeEventListener("change", handleChange);
   }, []);
+
   const [{}, drag] = useDrag({
     type: "MATCH",
     item: { index },
@@ -134,33 +100,60 @@ const DraggableMatch = ({ match, index, moveCard, flashingCells }) => {
   const backgroundColor = darkMode ? "navy" : "#FFF";
 
   return (
-    <MatchCard ref={(node) => drag(drop(node))} style={{ backgroundColor: backgroundColor, color: textColor}}>
+    <MatchCard ref={(node) => drag(drop(node))} className={styles.matchCard} style={{ backgroundColor: backgroundColor, color: textColor }}>
       <h3>{match.round}</h3>
-      <PlayersContainer>
-        <Player>
-          <PlayerImage src={match.homeLogo || defaultSilhouette} alt="Home Player" />
-          <span>{match.homePlayer}</span>
-        </Player>
-        <Player>
-          <PlayerImage src={match.awayLogo || defaultSilhouette} alt="Away Player" />
-          <span>{match.awayPlayer}</span>
-        </Player>
-      </PlayersContainer>
-      <OddsContainer>
-        <FlashingOdds>
+      <Box className={styles.matchRow}>
+        <Box className={styles.playerContainer}>
+          <Box className={styles.playerColumn}>
+            <img className={styles.playerImage} src={match.homeLogo || defaultSilhouette} alt="Home Player" />
+            <span>{match.homePlayer}</span>
+            {match.servingPlayer === "First Player" && <div className={styles.tennisBall}>🎾</div>}
+          </Box>
           {match.homeOdd}
-        </FlashingOdds>
-        <FlashingOdds>
+        </Box>
+
+        {/* Scoreboard with Curly Braces */}
+        <Box className={styles.scoreboard}>
+          <span className={styles.brace}>{"{"}</span>
+          <div className={styles.scoreContent}>
+            {/* First row: Completed sets count (First Player - Second Player) */}
+            <div>
+              {match.setScores
+                ? `${match.setScores.filter(set => parseInt(set.score_first) >= 6 && parseInt(set.score_first) - parseInt(set.score_second) >= 2).length} - 
+                  ${match.setScores.filter(set => parseInt(set.score_second) >= 6 && parseInt(set.score_second) - parseInt(set.score_first) >= 2).length}`
+                : "0 - 0"}
+            </div>
+            {/* Second row: Current set score (last non-zero set) */}
+            <div>
+              {match.setScores?.findLast(set => parseInt(set.score_first) > 0 || parseInt(set.score_second) > 0)
+                ? `${match.setScores.findLast(set => parseInt(set.score_first) > 0 || parseInt(set.score_second) > 0).score_first} - 
+                  ${match.setScores.findLast(set => parseInt(set.score_first) > 0 || parseInt(set.score_second) > 0).score_second}`
+                : "0 - 0"}
+            </div>
+            <div>{match.score || "0 - 0"}</div> {/* Current game score */}
+          </div>
+          <span className={styles.brace}>{"}"}</span>
+        </Box>
+
+        <Box className={styles.playerContainer}>
           {match.awayOdd}
-        </FlashingOdds>
-      </OddsContainer>
+          <Box className={styles.playerColumn}>
+            <img className={styles.playerImage} src={match.awayLogo || defaultSilhouette} alt="Away Player" />
+            <span>{match.awayPlayer}</span>
+            {match.servingPlayer === "Second Player" && <div className={styles.tennisBall}>🎾</div>}
+          </Box>
+        </Box>
+      </Box>
     </MatchCard>
   );
 };
 
+
 function App() {
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const matchesRef = useRef([]);
 
   const apiKey = import.meta.env.VITE_API_KEY;
 
@@ -169,24 +162,14 @@ function App() {
       const response = await axios.get("/.netlify/functions/getOdds");
       const events = Object.values(response.data.result || {});
       console.log("Live Odds API:", events);
+  
       const formattedMatches = await Promise.all(
         events.map(async (event) => {
-          const existingMatch = matches.find(m => m.event_key === event.event_key);
-  
           const homeWinOdd = event.live_odds?.find(o => o.odd_name === "To Win" && o.type === "Home")?.value || "N/A";
           const awayWinOdd = event.live_odds?.find(o => o.odd_name === "To Win" && o.type === "Away")?.value || "N/A";
-          console.log(existingMatch)
-          const homePlayer = existingMatch?.homePlayer || 
-            (await axios.get(`/.netlify/functions/getPlayer?player_key=${event.first_player_key}`)).data.player_name;
-  
-          const awayPlayer = existingMatch ? existingMatch.awayPlayer :
-            (await axios.get(`/.netlify/functions/getPlayer?player_key=${event.second_player_key}`)).data.player_name;
-  
           return {
             event_key: event.event_key,
             round: event.tournament_name,
-            homePlayer,
-            awayPlayer,
             homeLogo: event.event_first_player_logo,
             awayLogo: event.event_second_player_logo,
             homeOdd: convertDecimalToAmerican(homeWinOdd),
@@ -195,18 +178,77 @@ function App() {
         })
       );
   
-      setMatches(formattedMatches);
-      setLoading(false);
+      setMatches((prevMatches) => {
+        return events.map((event) => {
+          const existingMatch = prevMatches.find((m) => m.event_key === event.event_key); // Find existing match
+  
+          return {
+            ...existingMatch, // Preserve existing data (score, setScores, servingPlayer)
+            event_key: event.event_key,
+            round: event.tournament_name,
+            homeLogo: event.event_first_player_logo,
+            awayLogo: event.event_second_player_logo,
+            homeOdd: convertDecimalToAmerican(
+              event.live_odds?.find(o => o.odd_name === "To Win" && o.type === "Home")?.value || "N/A"
+            ),
+            awayOdd: convertDecimalToAmerican(
+              event.live_odds?.find(o => o.odd_name === "To Win" && o.type === "Away")?.value || "N/A"
+            ),
+          };
+        });
+      });
+
+      matchesRef.current = formattedMatches;
+      if (loading) {
+        setLoading(false);
+      }
     } catch (error) {
       console.error("Error fetching odds:", error);
     }
   };
   
+  const fetchLiveScores = async (matches) => {
+    try {
+      const response = await axios.get("/.netlify/functions/getLiveScores");
+      const liveMatches = response.data.result || [];
+      console.log("Live Scores API:", liveMatches);
+  
+      // Update scores for matches that exist
+      const updatedMatches = matches.map((match) => {
+        const currentMatch = liveMatches.find((m) => m.event_key === match.event_key);
+        return currentMatch
+          ? {
+              ...match,
+              homePlayer: currentMatch.event_first_player,
+              awayPlayer: currentMatch.event_second_player,
+              score: currentMatch.event_game_result || "0 - 0",
+              setScores: currentMatch.scores || [],
+              servingPlayer: currentMatch.event_serve,
+            }
+          : match; // Keep existing match if no live score found
+      });
+  
+      setMatches(updatedMatches);
+    } catch (error) {
+      console.error("Error fetching live scores:", error);
+    }
+  };
+  
   useEffect(() => {
-    fetchOdds();
-    const interval = setInterval(fetchOdds, 10000);
+    const fetchData = async () => {
+      await fetchOdds(); // Fetch odds first
+    };
+  
+    fetchData();
+    const interval = setInterval(fetchOdds, 10000); // Refresh odds every 10s
     return () => clearInterval(interval);
   }, []);
+  
+  useEffect(() => {
+    if (!loading && matchesRef.current.length > 0) {
+      fetchLiveScores(matchesRef.current); // Uses ref for immediate data access
+    }
+  }, [loading]);
   
   useEffect(() => {
     const socket = initializeWebSocket(apiKey, setMatches, fetchOdds, setLoading);

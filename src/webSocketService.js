@@ -12,21 +12,22 @@ export const initializeWebSocket = (apiKey, setMatches, fetchOdds, setLoading) =
           if (!matchesData || Object.keys(matchesData).length === 0) return;
   
           console.log("WebSocket Data:", matchesData);
-          const formattedMatches = Object.values(matchesData).map(event => ({
-            event_key: event.event_key,
-            round: event.tournament_name,
-            homePlayer: event.event_first_player,
-            awayPlayer: event.event_second_player,
-            homeLogo: event.event_first_player_logo,
-            awayLogo: event.event_second_player_logo,
-            homeOdd: "N/A",
-            awayOdd: "N/A",
-          }));
   
-          //setMatches(formattedMatches);
-          //setLoading(false);
+          setMatches((prevMatches) =>
+            prevMatches.map((match) => {
+              const updatedMatch = Object.values(matchesData).find((event) => event.event_key === match.event_key);
   
-          //fetchOdds();
+              if (updatedMatch) {
+                return {
+                  ...match, // Keep existing odds & other details
+                  score: updatedMatch.event_game_result || match.score, // Update live score
+                  setScores: updatedMatch.scores || match.setScores, // Update set scores
+                  servingPlayer: updatedMatch.event_serve || match.servingPlayer, // Update serving player
+                };
+              }
+              return match; // Keep match unchanged if no update is available
+            })
+          );
         } catch (err) {
           console.error("Error parsing WebSocket message:", err);
         }

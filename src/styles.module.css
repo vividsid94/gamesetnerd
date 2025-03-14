@@ -75,3 +75,66 @@
   gap: 50px; /* ✅ Adds space between cards */
   margin-top: 20px;
 }
+
+.matchCard {
+  background-color: var(--backgroundColor);
+  color: var(--textColor);
+  padding: 5px 15px 10px;
+  border-radius: 10px;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+  width: 350px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.matchRow {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.playerContainer {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0px; 
+}
+
+.playerColumn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.playerImage {
+  height: 40px;
+  width: 40px;
+  border-radius: 50px;
+  object-fit: cover;
+}
+
+.scoreboard {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: bold;
+  text-align: center;
+  color: inherit;
+  min-width: 100px;
+  font-family: monospace;
+}
+
+.scoreContent {
+  font-size: 0.8rem;
+}
+
+
+.brace {
+  font-size: 3rem; /* Make the braces take up the full height */
+  line-height: 1;
+  display: flex;
+  align-items: center;
+}

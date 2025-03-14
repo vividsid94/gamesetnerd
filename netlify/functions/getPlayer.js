@@ -21,7 +21,7 @@ export const handler = async (event) => {
       return {
         statusCode: 200,
         body: JSON.stringify({
-            player_name: player.player_full_name || player.player_name,
+            player_name: player.player_name,
         }),
       };
     } else {
