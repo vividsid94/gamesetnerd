@@ -102,6 +102,16 @@ const defaultSilhouette = "https://upload.wikimedia.org/wikipedia/commons/7/7c/P
 
 // Draggable Card Component
 const DraggableMatch = ({ match, index, moveCard, flashingCells }) => {
+  
+  const [darkMode, setDarkMode] = useState(window.matchMedia("(prefers-color-scheme: dark)").matches);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleChange = () => setDarkMode(mediaQuery.matches);
+
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, []);
   const [{}, drag] = useDrag({
     type: "MATCH",
     item: { index },
@@ -120,8 +130,11 @@ const DraggableMatch = ({ match, index, moveCard, flashingCells }) => {
     },
   });
 
+  const textColor = darkMode ? "#FFF" : "#000";
+  const backgroundColor = darkMode ? "navy" : "#FFF";
+
   return (
-    <MatchCard ref={(node) => drag(drop(node))} >
+    <MatchCard ref={(node) => drag(drop(node))} style={{ backgroundColor: backgroundColor, color: textColor}}>
       <h3>{match.round}</h3>
       <PlayersContainer>
         <Player>
@@ -214,11 +227,6 @@ function App() {
     }
   }
 
-   // Detect system dark mode
-   const prefersDarkMode = window.matchMedia("(prefers-color-scheme: dark)").matches;
-   const textColor = prefersDarkMode ? "#FFF" : "#000"; // White for dark mode, black for light mode
-   const backgroundColor = prefersDarkMode ? "#121212" : "#FFF"; // Dark background for dark mode
-
   const moveCard = (fromIndex, toIndex) => {
     setMatches((prevMatches) => {
       const updatedMatches = [...prevMatches];
@@ -237,7 +245,7 @@ function App() {
   });  
   return (
     <DndProvider backend={HTML5Backend}>
-      <Box className={styles.container} style={{ backgroundColor: backgroundColor, color: textColor}}>
+      <Box className={styles.container}>
       <div className={styles.center}>
         <h2 className={styles.title}>Game, Set, Nerd! 🎾</h2>
         <ToggleButtonGroup
