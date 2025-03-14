@@ -248,7 +248,7 @@ function App() {
     if (!loading && matchesRef.current.length > 0) {
       fetchLiveScores(matchesRef.current); // Uses ref for immediate data access
     }
-  }, [loading]);
+  }, [loading, matchesRef.current]);
   
   useEffect(() => {
     const socket = initializeWebSocket(apiKey, setMatches, fetchOdds, setLoading);
@@ -289,7 +289,7 @@ function App() {
     <DndProvider backend={HTML5Backend}>
       <Box className={styles.container}>
       <div className={styles.center}>
-        <h2 className={styles.title}>Game, Set, Nerd! 🎾</h2>
+        <h2 className={styles.title}>Game, Set, Turd! 🎾</h2>
         <ToggleButtonGroup
           value={tournamentType}
           exclusive
