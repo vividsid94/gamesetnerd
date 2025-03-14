@@ -214,6 +214,11 @@ function App() {
     }
   }
 
+   // Detect system dark mode
+   const prefersDarkMode = window.matchMedia("(prefers-color-scheme: dark)").matches;
+   const textColor = prefersDarkMode ? "#FFF" : "#000"; // White for dark mode, black for light mode
+   const backgroundColor = prefersDarkMode ? "#121212" : "#FFF"; // Dark background for dark mode
+
   const moveCard = (fromIndex, toIndex) => {
     setMatches((prevMatches) => {
       const updatedMatches = [...prevMatches];
@@ -232,7 +237,7 @@ function App() {
   });  
   return (
     <DndProvider backend={HTML5Backend}>
-      <Box className={styles.container}>
+      <Box className={styles.container} style={{ backgroundColor: backgroundColor, color: textColor}}>
       <div className={styles.center}>
         <h2 className={styles.title}>Game, Set, Nerd! 🎾</h2>
         <ToggleButtonGroup
@@ -243,9 +248,9 @@ function App() {
           sx={{ marginBottom: "20px" }}
         >
           <ToggleButton value="all">All</ToggleButton>
+          <ToggleButton value="atp-wta">ATP/WTA</ToggleButton>
           <ToggleButton value="challenger">Challenger</ToggleButton>
           <ToggleButton value="itf">ITF</ToggleButton>
-          <ToggleButton value="atp-wta">ATP/WTA</ToggleButton>
         </ToggleButtonGroup>
       </div>
       {loading ? (
